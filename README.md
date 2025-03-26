@@ -1,0 +1,2 @@
+# GRAIL_SERIAL
+GRAIL通过mega2560与外部传递信号的接口项目
