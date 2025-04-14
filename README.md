@@ -14,7 +14,7 @@ GRAIL 通过 Mega2560 进行信号传输的串口通信项目。
 ├── README.md              # 项目说明文档
 ├── Mega2560Serial.py      # Python 端串口通信脚本
 ├── example/MegaExample.py  # 示例文件
-└── Serial2IO/Serial2IO.ino # Arduino Mega2560 端代码（未上传）
+└── Serial2IO/Serial2IO.ino # Arduino Mega2560 端代码
 ```
 
 ## 3. Python 端使用说明
