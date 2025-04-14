@@ -3,7 +3,7 @@ import json
 import time
 
 class Mega2560Serial:
-    def __init__(self, port="COM6", baudrate=2000000, timeout=0.1):
+    def __init__(self, port="COM6", baudrate=2000000, timeout=1.0):
         try:
             self.ser = serial.Serial(port, baudrate, timeout=timeout)
             print(f"[INFO] 连接到 {port}，波特率 {baudrate}")
@@ -25,20 +25,51 @@ class Mega2560Serial:
         self.ser.write(json_data.encode())
         print(f"[TX] 发送数据: {json_data.strip()}")
 
-    def read_response(self):
-        """ 读取 MEGA2560 反馈数据，并打印调试信息 """
+    # def read_response(self):
+    #     """ 读取 MEGA2560 反馈数据，并打印调试信息 """
+    #     if not self.ser:
+    #         return None
+
+    #     try:
+    #         line = self.ser.readline().decode().strip()
+    #         if line:
+    #             print(f"[RX] 接收到数据: {line}")
+    #             return json.loads(line)
+    #     except json.JSONDecodeError as e:
+    #         print(f"[ERROR] JSON 解析失败: {e}, 原始数据: {line}")
+    #     except Exception as e:
+    #         print(f"[ERROR] 读取数据失败: {e}")
+    #     return None
+    def read_response(self, retries=3):
+        """ 改进版响应读取，增加重试机制 """
         if not self.ser:
             return None
 
-        try:
-            line = self.ser.readline().decode().strip()
-            if line:
+        for attempt in range(retries):
+            try:
+                # 逐字节读取直到换行符
+                buffer = []
+                while True:
+                    byte = self.ser.read(size=1)
+                    if byte == b'\n' or not byte:  # 检测到换行符或超时
+                        break
+                    buffer.append(byte.decode(errors='ignore'))
+                
+                line = ''.join(buffer).strip()
+                if not line:
+                    continue
+
                 print(f"[RX] 接收到数据: {line}")
                 return json.loads(line)
-        except json.JSONDecodeError as e:
-            print(f"[ERROR] JSON 解析失败: {e}, 原始数据: {line}")
-        except Exception as e:
-            print(f"[ERROR] 读取数据失败: {e}")
+                
+            except json.JSONDecodeError as e:
+                print(f"[WARN] 第{attempt+1}次解析失败，原始数据: {line}")
+                time.sleep(0.01 * (attempt+1))  # 指数退避
+            except Exception as e:
+                print(f"[ERROR] 读取异常: {e}")
+                break
+                
+        print(f"[ERROR] 超过最大重试次数{retries}")
         return None
     
     def read_serial(self):
@@ -60,7 +91,7 @@ class Mega2560Serial:
 
     def set_analog(self, ch, value):
         """ 设置模拟输出 """
-        self.send_command(ch, "write", "analog", value)
+        self.send_command(ch, "write", "analog", round(value,3))
         time.sleep(0.005) # 延迟少量时间，确保串口数据，如果有bug 可以修改此处
 
     def set_digital_8bit(self, ch, value):
